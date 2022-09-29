@@ -20,7 +20,6 @@ Startup @{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         if not self.persistent_views_added:
             self.add_view(cogs.join2create.Join2CreateView())
             self.persistent_views_added = True
-#           self.add_view(PersistentView())
 
 
 client = Dragon(

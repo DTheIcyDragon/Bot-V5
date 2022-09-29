@@ -21,13 +21,13 @@ class MaxUsersModal(discord.ui.Modal):
         member = guild.get_member(interaction.user.id)
         channel = guild.get_channel(member.voice.channel.id)
         try:
-            limit = int(self.children[0].value)
-            await channel.edit(user_limit = limit)
-            if limit == 0:
+            entered = int(self.children[0].value)
+            await channel.edit(user_limit = entered)
+            if entered == 0:
                 await interaction.response.send_message(f"Removed max members limit",
                                                         ephemeral = True)
 
-            await interaction.response.send_message(f"Max members adjusted to {limit}",
+            await interaction.response.send_message(f"Max members adjusted to {entered}",
                                                     ephemeral = True)
 
         except ValueError:

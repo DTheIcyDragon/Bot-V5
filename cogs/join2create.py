@@ -17,7 +17,7 @@ def is_owner(user_id: int, voice_id: int) -> bool:
 def is_locked(voice_id: int) -> bool:
     with open("db/tempchannel.json", "r") as r:
         data: dict = json.load(r)
-    if not data[str(voice_id)]["locked"]:
+    if data[str(voice_id)]["locked"]:
         return True
     return False
 
@@ -48,7 +48,7 @@ class MaxUsersModal(discord.ui.Modal):
         except AttributeError:
             return await interaction.response.send_message(f"**You are not in a voice channel.**")
 
-        if is_owner(member.id, channel.id):
+        if is_owner(user_id = member.id, voice_id = channel.id):
 
             try:
                 value = int(self.children[0].value)
@@ -86,6 +86,62 @@ class MaxUsersModal(discord.ui.Modal):
                 pass
 
 
+class BitrateModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.add_item(discord.ui.InputText(
+            label = "Bitrate",
+            min_length = 1,
+            max_length = 3,
+            placeholder = "Default is 64"))
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        try:
+            channel = guild.get_channel(member.voice.channel.id)
+        except AttributeError:
+            return await interaction.response.send_message(f"**You are not in a voice channel.**")
+
+        if is_owner(user_id = member.id, voice_id = channel.id):
+
+            try:
+                value = int(self.children[0].value)
+
+                if value < 8:
+                    await interaction.response.send_message(f"Please don't write a number larger then 8.",
+                                                            ephemeral = True,
+                                                            delete_after = 5)
+
+                if value > 128:
+                    await interaction.response.send_message(f"Please don't write a number larger then 128.",
+                                                            ephemeral = True,
+                                                            delete_after = 5)
+
+                await interaction.response.send_message(f"Bitrate adjusted to {value}.",
+                                                        ephemeral = True,
+                                                        delete_after = 5)
+
+                await channel.edit(bitrate = value * 1000)
+
+            except ValueError:
+                await interaction.response.send_message(f"**You messed up to write a valid number!**",
+                                                        ephemeral = True,
+                                                        delete_after = 5)
+
+            except discord.errors.InteractionResponded:
+                pass
+
+        else:
+            try:
+                await interaction.response.send_message(f"**You are not the owner of the channel.**",
+                                                        ephemeral = True,
+                                                        delete_after = 5)
+            except discord.errors.InteractionResponded:
+                pass
+
+
 class RenameModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -104,7 +160,7 @@ class RenameModal(discord.ui.Modal):
         except AttributeError:
             return await interaction.response.send_message(f"**You are not in a voice channel.**")
 
-        if is_owner(member.id, channel.id):
+        if is_owner(user_id = member.id, voice_id = channel.id):
             await channel.edit(name = self.children[0].value)
             await interaction.response.send_message(f"**Channel name changed to \"{self.children[0].value}\"**",
                                                     ephemeral = True,
@@ -149,24 +205,8 @@ class Join2CreateView(discord.ui.View):
                                                            ephemeral = True,
                                                            delete_after = 5)
 
-        if is_owner(interaction.user.id, interaction.channel.id):
-            if is_locked(interaction.channel.id):
-                overwritten = {
-                    guild.default_role: discord.PermissionOverwrite(view_channel = False),
-                    member: discord.PermissionOverwrite(connect = True,
-                                                        speak = True),
-                    verified_role: discord.PermissionOverwrite(connect = False,
-                                                               speak = True)
-                }
-                with open("db/tempchannel.json", "r") as r:
-                    data: dict = json.load(r)
-                data[str(channel.id)]["locked"] = True
-                with open("db/tempchannel.json", "w") as w:
-                    json.dump(data, w, indent = 4)
-                await channel.edit(overwrites = overwritten)
-                await interaction.response.send_message(f"**Your channel is now locked for {verified_role.name}**")
-
-            else:
+        if is_owner(user_id = member.id, voice_id = channel.id):
+            if is_locked(channel.id):
                 overwritten = {
                     guild.default_role: discord.PermissionOverwrite(view_channel = False),
                     member: discord.PermissionOverwrite(connect = True,
@@ -181,6 +221,22 @@ class Join2CreateView(discord.ui.View):
                     json.dump(data, w, indent = 4)
                 await channel.edit(overwrites = overwritten)
                 await interaction.response.send_message(f"**Your channel is now unlocked for {verified_role.name}**")
+
+            else:
+                overwritten = {
+                    guild.default_role: discord.PermissionOverwrite(view_channel = False),
+                    member: discord.PermissionOverwrite(connect = True,
+                                                        speak = True),
+                    verified_role: discord.PermissionOverwrite(connect = False,
+                                                               speak = True)
+                }
+                with open("db/tempchannel.json", "r") as r:
+                    data: dict = json.load(r)
+                data[str(channel.id)]["locked"] = True
+                with open("db/tempchannel.json", "w") as w:
+                    json.dump(data, w, indent = 4)
+                await channel.edit(overwrites = overwritten)
+                await interaction.response.send_message(f"**Your channel is now locked for {verified_role.name}**")
 
     @discord.ui.button(style = discord.ButtonStyle.blurple,
                        label = "Take ownership",
@@ -233,30 +289,13 @@ class Join2CreateView(discord.ui.View):
                                                            ephemeral = True,
                                                            delete_after = 5)
 
-        if is_owner(interaction.user.id, interaction.channel.id):
-            if is_ghosted(interaction.channel.id):
+        if is_owner(user_id = member.id, voice_id = channel.id):
+            if is_ghosted(channel.id):
                 overwritten = {
                     guild.default_role: discord.PermissionOverwrite(view_channel = False),
                     member: discord.PermissionOverwrite(connect = True,
                                                         speak = True),
                     verified_role: discord.PermissionOverwrite(connect = False,
-                                                               speak = True,
-                                                               view_channel = False)
-                }
-                with open("db/tempchannel.json", "r") as r:
-                    data: dict = json.load(r)
-                data[str(channel.id)]["ghosted"] = True
-                with open("db/tempchannel.json", "w") as w:
-                    json.dump(data, w, indent = 4)
-                await channel.edit(overwrites = overwritten)
-                await interaction.response.send_message(f"**Your channel is now invisible for {verified_role.name}**")
-
-            else:
-                overwritten = {
-                    guild.default_role: discord.PermissionOverwrite(view_channel = False),
-                    member: discord.PermissionOverwrite(connect = True,
-                                                        speak = True),
-                    verified_role: discord.PermissionOverwrite(connect = True,
                                                                speak = True,
                                                                view_channel = True)
                 }
@@ -268,11 +307,38 @@ class Join2CreateView(discord.ui.View):
                 await channel.edit(overwrites = overwritten)
                 await interaction.response.send_message(f"**Your channel is now visible for {verified_role.name}**")
 
+            else:
+                overwritten = {
+                    guild.default_role: discord.PermissionOverwrite(view_channel = False),
+                    member: discord.PermissionOverwrite(connect = True,
+                                                        speak = True),
+                    verified_role: discord.PermissionOverwrite(connect = True,
+                                                               speak = True,
+                                                               view_channel = False)
+                }
+                with open("db/tempchannel.json", "r") as r:
+                    data: dict = json.load(r)
+                data[str(channel.id)]["ghosted"] = True
+                with open("db/tempchannel.json", "w") as w:
+                    json.dump(data, w, indent = 4)
+                await channel.edit(overwrites = overwritten)
+                await interaction.response.send_message(f"**Your channel is now invisible for {verified_role.name}**")
+
     @discord.ui.button(style = discord.ButtonStyle.blurple,
                        label = "Bitrate",
                        custom_id = "pers:but:BiTrAtE")
-    async def function2(self, button: discord.Button, interaction: discord.Interaction):
-        pass
+    async def bitrate_button(self, button: discord.Button, interaction: discord.Interaction):
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        try:
+            channel = guild.get_channel(member.voice.channel.id)
+        except AttributeError:
+            return await interaction.response.send_message(f"**You are not in a voice channel.**",
+                                                           ephemeral = True,
+                                                           delete_after = 5)
+
+        if is_owner(user_id = member.id, voice_id = channel.id):
+            await interaction.response.send_modal(BitrateModal(title = "Set the Bitrate"))
 
 
 class JoinToCreate(commands.Cog):
@@ -290,14 +356,10 @@ class JoinToCreate(commands.Cog):
                      value = "If you are the channel owner you can set the maximal amount of members in a voice channel")
         em.add_field(name = "Lock", value = f"Lock your voice channel for <@&{SETTINGS.VERIFY_ROLE}>")
         em.add_field(name = "Take ownership", value = "If the old owner left the channel you can take ownership")
-        em.add_field(name = "Permit", value = "Allow or disallow users or roles to your channel")
+        # em.add_field(name = "Permit", value = "Allow or disallow users or roles to your channel")
         em.add_field(name = "Ghost", value = "Allow your channel to be seen by the public or not")
         em.add_field(name = "Bitrate", value = "Edit the voice quality of your channel")
         await ctx.channel.send(embed = em, view = Join2CreateView())
-
-    @commands.command(name = "temp")
-    async def temp(self, ctx):
-        await ctx.channel.send(embed = discord.Embed(description = ctx.channel.overwrites))
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_join(self,

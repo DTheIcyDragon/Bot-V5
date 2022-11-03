@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 import SETTINGS
+import embeds
 
 
 def is_owner(user_id: int, voice_id: int) -> bool:
@@ -343,7 +344,7 @@ class Join2CreateView(discord.ui.View):
 
 class JoinToCreate(commands.Cog):
     def __init__(self, client):
-        self.client = client
+        self.client: discord.Bot = client
 
     @commands.command(name = "Join2Create")
     @commands.has_permissions(administrator = True)
@@ -379,7 +380,6 @@ class JoinToCreate(commands.Cog):
                 data[str(new_voice.id)]["owner"] = member.id
                 data[str(new_voice.id)]["locked"] = False
                 data[str(new_voice.id)]["ghosted"] = False
-                data[str(new_voice.id)]["permits"] = {}
                 with open("db/tempchannel.json", "w") as w:
                     json.dump(data, w, indent = 4)
 
@@ -410,6 +410,30 @@ class JoinToCreate(commands.Cog):
 
         except AttributeError:
             pass
+
+    @commands.slash_command(name = "permit",
+                            description = "Allow access to your personal channel")
+    async def permit_cmd(self,
+                         ctx: discord.ApplicationContext,
+                         mention: discord.Option(discord.abc.Mentionable),
+                         allow: discord.Option(bool)):
+        guild = ctx.guild
+        member = guild.get_member(ctx.author.id)
+        try:
+            channel = guild.get_channel(member.voice.channel.id)
+        except AttributeError:
+            return await ctx.response.send_message(f"**You are not in a voice channel.**",
+                                                   ephemeral = True,
+                                                   delete_after = 5)
+
+        if is_owner(user_id = member.id, voice_id = channel.id):
+            overwritten = {
+                mention: discord.PermissionOverwrite(connect = allow,
+                                                     speak = allow)
+            }
+            await channel.edit(overwrites = overwritten)
+            await ctx.response.send_message(embed = embeds.embed_success(f"{['Allowed' if allow else 'Denied']} access for {mention.mention}".strip("['']")))
+
 
 
 def setup(client):

@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 import SETTINGS
-import cogs.join2create
+from cogs.join2create import Join2CreateView
 
 
 class Dragon(commands.Bot):
@@ -18,7 +18,7 @@ Logged in as {self.user.name}#{self.user.discriminator}
 Startup @{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """)
         if not self.persistent_views_added:
-            self.add_view(cogs.join2create.Join2CreateView())
+            self.add_view(Join2CreateView())
             self.persistent_views_added = True
 
 

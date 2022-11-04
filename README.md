@@ -3,7 +3,10 @@
 ## Docs
 ### settings.py
 ```py
-TOKEN = "your-bot-token"
+TOKEN = "your bot TOKEN"
+GUILDS = [your main guild id, you may also enter multiple]
+
+JOIN2CREATE = The voice channel id that will be used to create new voice channels
 ```
-### main.py
-place for the client kernels loads persistent views loads cogs and changes the status
+### bot.py
+Place for the "kernel" of the bot

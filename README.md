@@ -1,7 +1,7 @@
 # Bot-V5
 
 ## Docs
-### settings.py
+### SETTINGS.py
 ```py
 TOKEN = "your bot TOKEN"
 GUILDS = [your main guild id, you may also enter multiple]
